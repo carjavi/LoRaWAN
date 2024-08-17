@@ -1,6 +1,6 @@
 <p align="center"><img src="./img/lorawan.png" width="400"   alt=" " /></p>
 <h1 align="center"> LoRaWAN </h1> 
-<h4 align="right">Ago 24</h4>
+<h4 align="right">Aug 24</h4>
 
 <img src="https://img.shields.io/badge/OS-Linux%20GNU-yellowgreen">
 <img src="https://img.shields.io/badge/OS-Windows%2011-blue">
@@ -143,7 +143,7 @@ Waterproof RS485/UART to LoRaWAN Converter
 info: http://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20LoRaWAN%20End%20Nodes/RS485-LB_Waterproof_RS485UART_to_LoRaWAN_Converter/
 
 > :memo: **Note:** La configuración interna del equipo es mediante puerto serial y 
-```comandos AT```, la comunicación con UART/RS485 es por el protocolo ```MODBUS```
+```comandos AT```, la comunicación con los sensores es mediante UART/RS485 por el protocolo ```MODBUS```
 
 ## Button's RS485-LB
 ```Pressed 1s < time < 3s:``` Send an uplink (If sensor is already Joined to LoRaWAN network, sensor will send an uplink packet, blue led will blink once.)
@@ -189,7 +189,7 @@ Software ```DRAGINO-RS485-Config V1.3```<br>
 | `AT+VER=?`| Show Image version and Frequency Band |
 | `AT+PWORD=?` | get password                    |
 | `AT+CFG` | Print all configurations |
-| `AT+MOD=?`   | 1 or 2  |
+| `AT+MOD=?`   | 1 or 2 define si el sensor es UART o RS485|
 | `AT+MOD=1` | input RS485 sensor |
 | `AT+MOD=2` | input UART sensor |
 | `AT+5VT=?` | Get times Output +5V                    |
@@ -220,13 +220,289 @@ Software ```DRAGINO-RS485-Config V1.3```<br>
  ```AT+COMMANDx:```  Configure RS485 read command to sensor.<br>
  ```AT+DATACUTx:```  Configure how to handle return from RS485 devices. This command defines how to handle the return from AT+COMMANDx, max reture length is 40 bytes.PAYLOAD is available after the valid value is intercepted.<br>
  ```AT+SEARCHx:```   Configure search command. <br>
- ```AT+CFGDEV:```  send Modbus commands to the serial device to configure it. <br>
+ ```AT+CFGDEV:```  send Modbus commands to the serial device to configure it. 
+ 
+ <br>
+
+
+## AT+COMMANDx:
+Con este comando le decimos al 485-LB  como va a leer los datos en el momento que pedimos leer el sensor, bajo el protocolo ModBus
+
+### ModBus Resquest
+
+```
+01 03 0B B8 00 02 46 0A
+```
+en Modbus:<br>
+01 --- Address Field (direccion del esclavo)<br>
+03 ---  Function Register (Leer registros de tenencia)<br>
+0B ---- Starting Address Hi<br>
+B8 ---- Starting Address Lo <br>
+00 ---- Quantity of Coils Hi (cantidad de registro que va a leer)<br>
+02 ---- Quantity of Coils Lo<br>
+
+```este ultimo byte es el CRC-16/Modbus se calcula manualmente```<br>
+46 --- Error Check Lo<br>
+OA --- Error Check Hi<br>
+
+```0B B8 ``` registro va a iniciar la lectura de los datos <br>
+```00 02``` Cantidad de bytes que tiene la data 2 byte<br>
+
+
+### Funtion Register
+01 (0x01) Read Coils<br>
+02 (0x02) Read Discrete Inputs<br>
+03 (0x03) Read Holding Registers<br>
+04 (0x04) Read Input Registers<br>
+05 (0x05) Write Single Coil<br>
+06 (0x06) Write Single Register<br>
+08 (0x08) Diagnostics (Serial Line only)<br>
+11 (0x0B) Get Comm Event Counter (Serial Line only)<br>
+15 (0x0F) Write Multiple Coils<br>
+16 (0x10) Write Multiple Registers<br>
+17 (0x11) Report Server ID (Serial Line only)<br>
+22 (0x16) Mask Write Register<br>
+23 (0x17) Read/Write Multiple Registers<br>
+43 / 14 (0x2B / 0x0E) Read Device Identification<br>
+
+
+AT+COMMANDx command example. 
+```
+AT+COMMANDx=01 03 0B B8 00 02,m 
+```
+> :bulb: **Tip:**
+> * x => distintos comandos para leer cada sensor. x=1 es para el sensor 1, x = 2 es para el sensor 2. max 15, max 14Bytes por comandos
+> * m=0 => no CRC 
+> * m=1 => suma un CRC-16/Mobus al final de este comando (no se calcula)
+ 
+ejemplos:
+```
+AT+COMMAND1= 01 03 00 03 00 08,1 // read slave address 01 , function code 03, start address 0x03, quantity of registers 00 08 --> 8 bytes
+AT+DATACUT1=0,0,0 // obtiene toda la data sin cortarla
+RETURN1 = 01 03 10  + 8byte de registro + 86 fe
+```
+```
+AT+COMMAND2= 01 03 00 40 00 10,1 --> read slave address 01 , function code 03, start address 0x04, quantity of inputs 00 10 --> 10 bytes
+AT+DATACUT2=0,0,0 // obtiene toda la data sin cortarla
+RETURN2 = 01 03 10  + 8byte de registro + 86 fe
+```
+
+### Response to an AT+COMMANDx request (RETURNx)
+```
+01 03 04 00 06 00 05 DA 31
+```
+01 --- direccion del esclavo <br>
+03 --- funcion <br>
+04 --- Byte Count ?<br>
+00 --- Data Hi<br>
+06 --- Data Lo<br>
+00 --- Data Hi<br>
+05 --- Data Lo<br>
+DA --- Error Check Lo<br>
+31 --- Error Check Hi<br>
+
+ejemplo repuesta:
+```
+RETURN1：01 03 02 08 FD 7E 05
+```
+```The first byte:``` slave address <br>
+```The second byte:``` Return to read function code<br>
+```3rd byte:``` total number of bytes<br>
+```4th～5th bytes:``` register data<br>
+```6th and 7th bytes:``` CRC16 checksum<br>
+
+```08 FD``` is register data. 08FD hex = 2301 decimal.
+
+<br>
+
+## AT+DATACUTx
+Parsea la respuesta RETURN para sacar solo la data que nos interesa para el payload. Cuando el valor de retorno del sensor tiene una longitud fija y sabemos en qué posición debemos obtener el valor válido, podemos usar el comando AT+DATACUT.
+```
+AT+DATACUTx=a,b,c
+```
+> :bulb: **Tip:**
+> * a --> longitud del retorno de AT+COMMAND
+> * b = 1 ---> tomar valor válido por byte, máximo 6 bytes.
+> * b = 2 ---> tome un valor válido por sección de bytes, máximo 3 secciones.
+> * c --> definir la posición para el valor válido
+
+ejemplos:
+```
+AT+DATACUT1=10,1,9+4+6+8+1+3
+byte de respuesta 20 20 20 20 2d 30 2e 32 20 75 (10 byte)
+a = 10
+b = 1
+c = 9(noveno byte)+4(cuarto byte)+6(sexto byte)+8(octavo byte)+1(primer byte)+3(tercer byte)
+la data es: 20 20 30 32 20 20
+el paylod es :0c fc 01 y la data 20 20 30 32 20 20
+```
+```
+AT+DATACUT1=8,2,4~8
+RETURN1 = 20 20 20 20 2d 30 2e 00
+a = 8 (byte)
+b = 2 (toma un rango o intervalos de datos)
+c = 4~8 (del cuartobyte hasta el octavo byte) la data es: 20 2d 30 2e 00
+payload: 0c fc 01 y la data 20 2d 30 2e 00
+```
+```
+AT+DATACUT1=13,2,1~2+4~7+10~11
+RETURN1 = 90 02 6a 82 1a 04 20 2d 30 2e dd 9b 00
+a = 13 Byte
+b = 2 (toma un rango o intervalos de datos)
+c = 1~2+4~7+10~11 (intervalos)
+data es : 90 02 82 1a 04 20 2e dd
+payload: 0c fc 01 90 02 82 1a 04 20 2e dd
+```
+```
+address: 0x03  // saca la data de este registro
+AT+COMMAND1= 01 03 00 03 00 01,1
+RETURN1: 01 03 02 00 02 39 85 00 00
+AT+DATACUT1: 9,1,4+5+6+7 // Take the return value 00 02 39 85 as the valid value of reading current data and used to splice payload.
+```
+```
+address: 0x0031 
+AT+COMMAND3= 01 03 00 31 00 02,1
+RETURN3: 01 03 04 00 00 00 44 FA 00
+AT+DATACUT3: 9,1,4+5+6+7 Take the return value 00 00 00 44 as the valid value of reading total active energy data and used to splice payload
+```
+```
+AT+DATACUT1=0,0,0 // no corta la data
+```
+<br>
+
+## AT+SEARCHx
+Cuando el valor de retorno del sensor tiene una longitud dinámica y no estamos seguros de qué bytes son los datos válidos, sabemos qué valor sigue el valor válido. Podemos usar AT+SEARCH para buscar el valor válido en la cadena de retorno.
+```
+AT+SEARCHx=a,xx xx xx xx xx
+```
+> :bulb: **Tip:**
+> * a = 1 --- prefix match mode (lo que comience  con)
+> * a = 2 --- prefix and suffix match mode (comience o termine con)
+> * xx xx xx xx xx: match string 
+
+ejemplo:
+```
+la respuesta del comando AT+COMMAND1 es:
+16 0c 1e 56 34 2e 30 58 5f 36 41 30 31 00 49
+AT+SEARCH1=1,1E 56 34.  //(max 5 bytes for prefix)
+la data que se tomara sera lo que venga despues de  1E 56 34, 
+esta 2e 30 58 5f 36 41 30 31 00 49
+el paylod sera: 8d 2f 01 y la data 2e 30 58 5f 36 41 30 31 00 49
+```
+```
+respuesta : 16 0c 1e 56 34 2e 30 58 5f 36 41 30 31 00 49
+AT+SEARCH1=2, 1E 56 34+31 00 49
+busca lo que esta entre: 1E 56 3 y 31 00 49, la data es: 2e 30 58 5f 36 41 30
+el paylod sera: 8d 2f 01 y la data:2e 30 58 5f 36 41 30
+```
+```
+AT+SEARCH1=0,0  // es igual AT+DATACUT1=0,0,0 // no corta la data
+```
+
+> :bulb: **Tip:** ```AT+SEARCHx``` y ```AT+DATACUTx``` se pueden usar juntos; si ambos comandos están configurados, RS485-LB/LS primero procesará AT+SEARCHx en la cadena de retorno y obtendrá una cadena temporal, y luego procesará AT+DATACUTx en esta cadena temporal para obtener la carga útil final. En este caso, AT+DATACUTx debe configurarse en el formato AT+DATACUTx=0,xx,xx donde los bytes de retorno se establecen en 0.
+
+<br>
+
+## AT+CMDDL
+Algunos dispositivos RS485 pueden tener un retraso mayor en la respuesta, por lo que el usuario puede usar AT+CMDDL para configurar el tiempo de espera para recibir respuesta después de enviar el comando RS485. Por ejemplo: 
+```
+AT+CMDDL1=1000 // para enviar el tiempo de apertura a 1000ms
+```
+<br>
+
+## AT+GETSENSORVALUE
+Lectura de los sensores ya configurados con:  ```AT+COMMANDx```, ```AT+DATACUTx```, ```AT+SEARCHx``` y  ```AT+CFGDEV```
+```
+AT+GETSENSORVALUE=0 // leo la data sin enviar al server
+AT+GETSENSORVALUE=1  // leo la data y la sube al server
+```
+
+<br>
+
+## Componer la carga útil PAYLOAD
+cuando se manda a leer los sensores cada AT+COMMANDx and AT+DATACUTx saca la data de cada sensor y aqui veremos como empaquetar la data de cada sensor
+
+### Envia todos los datas recibidas en un solo formato al server
+```
+AT+DATAUP=0 // Envia todos los datas recibidas en un solo formato al server
+AT+PAYVER=1 // El usuario puede configurar el campo PAYVER para indicarle al servidor cómo decodificar la carga útil actual. el valor es asignado por el usuario. si el PAYVER=1 decodificalo de una forma, si es PAYVER=2 decodificalo de otra forma
+```
+
+el formato del Payload es:
+```
+Battery Info + PAYVER + VALID Value from RETURN1 + Valid Value from RETURN2 + … + RETURNx
+```
+ejemplo:
+```
+paylod = 0c fc 01 + data del RETURN1 + data del RETURN2...
+```
+
+```0c fc``` ---> bateria voltaje (2 byte)<br>
+```01```    --->PAYVER (1 byte)<br>
+
+### Enviar multiples subidas al server
+```
+AT+DATAUP=1 // Enviar multiples subidas al server
+AT+PAYVER=1 // El usuario puede configurar el campo PAYVER para indicarle al servidor cómo decodificar la carga útil actual. el valor es asignado por el usuario. si el PAYVER=1 deco
+```
+el formato del Payload es:
+```
+Battery Info + PAYVER + PAYLOAD COUNT + PAYLOAD# + DATA
+```
+1. Battery Info (2 bytes): Battery voltage
+2. PAYVER (1 byte): Defined by AT+PAYVER
+3. PAYLOAD COUNT (1 byte): Total de uplink(subidas al server) va hacer 
+4. PAYLOAD# (1 byte): cual paylod esta subiendo en ese momento
+5. DATA: Valid value: max 6 bytes(US915 version here, Notice*!) for each uplink so each uplink <= 11 bytes. For the last uplink, DATA will might less than 6 bytes
+
+<br>
+
+ejemplo: 3 comandos AT+COMMANDx and AT+DATACUTx
+```
+//va a subir 3 payload
+0c fc 01 03 00 + dato de cada sensor
+0c fc 01 03 01 + dato de cada sensor
+0c fc 01 03 02 + dato de cada sensor
+```
+
+> :warning: **Warning:** caso1: Cuando AT+MOD=1, si los datos interceptados por AT+DATACUT o AT+MBFUN están vacíos, se mostrará NULL y la carga útil se completará con n FF.
+
+ejemplo:
+```
+RETURN1 = NULL 
+payload = 01 02 00 ff ff ff ff ... ff
+```
+> :warning: **Warning:** caso2: Cuando AT+MOD=2, si los datos interceptados por AT+DATACUT o AT+MBFUN están vacíos, se mostrará NULL y la carga útil se completará con n 00s.
+
+ejemplo:
+```
+RETURN1 = NULL
+payload = 01 02 00 00 00 00 00 ... 00
+```
+<br>
+
+## AT+CFGDEV 
+Este comando se utiliza para configurar los dispositivos RS485/TTL; no se utilizarán durante el muestreo. 
+```
+AT+CFGDEV=xx xx xx xx xx xx xx,m    
+```  
+> :bulb: **Tip:**    
+> * m = 0 no CRC
+> * m = 1 add CRC-16/MODBUS in the end of this command
+
+<br>
+
+mas info: https://www.modbustools.com/modbus.html
+
+<br>
 
 
 
-
-### Battery check
+### Battery check 485-LB
 http://wiki.dragino.com/xwiki/bin/view/Main/How%20to%20calculate%20the%20battery%20life%20of%20Dragino%20sensors%3F/
+
+
+
 
 <br>
 
