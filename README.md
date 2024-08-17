@@ -287,21 +287,22 @@ AT+DATACUT2=0,0,0 // obtiene toda la data sin cortarla
 RETURN2 = 01 03 10  + 8byte de registro + 86 fe
 ```
 
-### Response to an AT+COMMANDx request (RETURNx)
+### RETURNx
+return modbus:
 ```
 01 03 04 00 06 00 05 DA 31
 ```
-01 --- direccion del esclavo <br>
-03 --- funcion <br>
-04 --- Byte Count ?<br>
-00 --- Data Hi<br>
-06 --- Data Lo<br>
-00 --- Data Hi<br>
-05 --- Data Lo<br>
-DA --- Error Check Lo<br>
-31 --- Error Check Hi<br>
+01 ---> direccion del esclavo <br>
+03 ---> funcion <br>
+04 ---> Byte Count ?<br>
+00 ---> Data Hi<br>
+06 ---> Data Lo<br>
+00 ---> Data Hi<br>
+05 ---> Data Lo<br>
+DA ---> Error Check Lo<br>
+31 ---> Error Check Hi<br>
 
-ejemplo repuesta:
+ejemplo:
 ```
 RETURN1：01 03 02 08 FD 7E 05
 ```
@@ -311,7 +312,7 @@ RETURN1：01 03 02 08 FD 7E 05
 ```4th～5th bytes:``` register data<br>
 ```6th and 7th bytes:``` CRC16 checksum<br>
 
-```08 FD``` is register data. 08FD hex = 2301 decimal.
+```08 FD``` is register data. 08FD hex => 2301 decimal.
 
 <br>
 
@@ -496,7 +497,218 @@ mas info: https://www.modbustools.com/modbus.html
 
 <br>
 
+# Dragino 485-LB read arduino UART MODBUS RTU
+code arduino:
+``` c++
+/*
+  * Arduino Modbus RS485/UART slave for Dragino RS485-BL
+  * Created by Carlos Briceño (2024) 
+  * https://github.com/smarmengol/Modbus-Master-Slave-for-Arduino
+ */
 
+// Uncomment these lines to use Software Serial for RS-485 communication (oooooooooooooooojjjjoooooooooooo)    <---------------------------
+//#define SWSERIAL_RX 6  //Digital pin used for software serial rx
+//#define SWSERIAL_TX 7  //Digital pin used for software serial tx
+
+#define SLAVE_ID 0x01  //Modbus slave address 8bit
+uint16_t modbus_array[] = {0,0,0,0,0,0}; //Initialization for Modbus Holding registers:  2 registros en 0 cada uno.
+#define RS485_DERE 4  //Digital pin connected to DE & RE pin of RS-485 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+//Many thanks to smarmengol: https://github.com/smarmengol/Modbus-Master-Slave-for-Arduino
+#include "src/Modbus-Master-Slave-for-Arduino-master/ModbusRtu.h"
+
+
+
+const uint16_t int_min_value = -32768;  //signed 16 bit integer ranges from -32768 to 32767
+
+
+#ifdef SWSERIAL_RX
+#include <SoftwareSerial.h>
+SoftwareSerial myserial(SWSERIAL_RX, SWSERIAL_TX);
+//Modbus slave ID, RS-485 module comunication on Software Serial, and Arduino digital pin connected to both DE & RE pins of RS-485
+Modbus slave(SLAVE_ID,myserial,RS485_DERE);
+#else
+//Modbus slave ID, RS-485 module comunication on Hardware Serial, and Arduino digital pin connected to both DE & RE pins of RS-485
+// OJOOOOO RS485_DERE podria ser 0 probar
+Modbus slave(SLAVE_ID,Serial,RS485_DERE);
+#endif
+
+//slave This is the name of the object being created from the Modbus class you can use it to manage communication with the Modbus master, including responding to read/write requests.
+//(SLAVE_ID, Serial, RS485_DERE):
+// The Serial object represents the default serial port on the Arduino, used for communication with the RS-485 transceiver.
+// the RS485_DERE This is the digital pin connected to both the DE (Driver Enable) and RE (Receiver Enable) pins of the RS-485 transceiver module.
+
+void setup()
+{
+  Serial.begin(9600);
+  Serial.println("Arduino Modbus Slave");
+  delay(5000);
+
+  
+  Serial.begin(9600);  //Init serial at 9600 baud
+  #ifdef SWSERIAL_RX
+  myserial.begin(9600);
+  #endif
+  uint16_t num5 = 4567;
+  slave.start();
+}
+
+
+
+void loop()
+{
+  //Read commands from master
+  // If a request is received, the slave decodes it and determines if the request is to read from or write to the holding registers.
+  slave.poll(modbus_array,sizeof(modbus_array)/sizeof(modbus_array[0]));
+
+  //sizeof(modbus_array)/sizeof(modbus_array[0]) This expression calculates the number of elements in the modbus_array.
+  //required by the poll method to know how many registers it can read from or write to.
+
+  int num1 = 187;
+  int num2 = 100;
+  int num3 = 49;
+  int num4 = 8;
+  uint16_t num5 = 4567;
+  uint16_t num6 = 123;
+
+  uint16_t valor1 = num1-int_min_value; //Manually converting from int to uint. To get back the actual value you should just subtract 32768 (and divide by 100)
+  uint16_t valor2 = num2-int_min_value;
+  uint16_t valor3 = num3-int_min_value;
+  uint16_t valor4 = num4-int_min_value;
+
+  //Grabamos data en los registros del array 
+  modbus_array[0] = valor1; // el array debe ser uint16_t y no un int o float. si valor tiene decimales se debe * 100 para quitar decimales y luego / 100 para mostrar el valor original
+  modbus_array[1] = valor2;
+  modbus_array[2] = valor3;
+  modbus_array[3] = valor4;
+  modbus_array[4] = num5;
+  modbus_array[5] = num6;
+
+  // solo para DEBUG, no puede enviar texto al terminal serial porque modifica el payload
+  //muestra el valor del registro 1 en uint
+  //Serial.print("Register 1 (uint): "); 
+  //Serial.println(modbus_array[0]); //
+
+  // muestra el registro1 como entero
+  //int num = (modbus_array[0]+int_min_value); //Convert from uint to int
+  //Serial.print("Register 1 (int): ");
+  //Serial.println(num);  // deberia mostrar 123
+
+  delay(200);
+
+}
+```
+
+## 485-LB configuration commands:
+```
+AT+MOD=2 // TTL UART
+AT+BAUDR=9600 // setting UART
+AT+PARITY=0
+AT+STOPBIT=1
+AT+DATABIT=8
+AT+CMDDL1=1000 // tiempo de espéra que va a esperar el RS485LB para recibir un dato
+AT+5VT=20000 // teimpo en que va a encender el arduino
+AT+MBFUN=1 // habilito lectura rapida de comandos MODBUS
+ATZ // reset
+AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
+AT+DATAUP=0 // configura para enviar la data en un solo payload al server
+AT+PAYVER=1 // etiqueta para identificar que es el payload 1
+
+```
+Leer 1er registro del arduino
+```
+AT+COMMAND1= 01 03 00 00 00 01,1  // con este comando solo lee el primer registro del array_bus
+AT+GETSENSORVALUE=0 // leo la data sin enviar al server
+RETURN1 = 01 03 XX 80 64 XX XX  
+PAYLOAD = XX XX XX 80 64   // así debería ser el payload
+```
+Leer 2do  registro del arduino
+```
+AT+COMMAND1= 01 03 00 00 00 02,1 
+AT+GETSENSORVALUE=0 // leo la data sin enviar al server
+la lectura deberia ser:
+RETURN1= 01 03 04 80 64 80 64 f2 07 
+PAYLOAD = xx xx xx 80 64 80 64
+registro 1 = 100 Dec/(64 80)hex, registro 2 = 100 Dec/(64 80)hex
+```
+
+Leer 3er registro del arduino
+```
+AT+COMMAND1= 01 03 00 00 00 03,1 
+AT+GETSENSORVALUE=0 // leo la data sin enviar al server
+la lectura deberia ser:
+RETURN1= 01 03 06 80 64 80 64 81 c8 46 a4
+PAYLOAD = 0d de6 01 80 64 80 64 81 c8 
+registro 1 = 100 Dec/(64 80)hex, registro 2 = 100 Dec/(64 80)hex, registro 3 = C8 81
+```
+
+## Payload Decoder TTN 
+
+```javascript
+function decodeUplink(input) {
+    // Crear un nuevo array de bytes que incluya todos los bytes originales
+    let extendedBytes = input.bytes.slice(); // Copia los bytes originales
+
+    return { 
+        data: Decode(input.fPort, extendedBytes, input.variables)
+    };   
+}
+
+function Decode(fPort, bytes, variables) {
+    // Helper function to convert bytes to an integer in big-endian order
+    function bytesToIntBigEndian(bytes) {
+        if (bytes.length === 2) {
+            return (bytes[0] << 8) | bytes[1]; // Big-endian order: MSB first
+        }
+        return 0;
+    }
+
+    // Extraer el tercer byte (índice 2)
+    let tercerByte = bytes[2];
+
+    // Extract bytes from the payload, starting from index 3
+    let pay_hex = Array.from(bytes.slice(3), byte => ('0' + byte.toString(16)).slice(-2)).join(', ');
+
+    let distancia = 0;
+    let confianza = 0;
+    let tercerDato = 0;
+
+    // Verificar si el tercer byte es igual a 01 antes de proceder con la transformación
+
+        // Split pay_hex into parts
+        let parts = pay_hex.split(', ').map(hex => parseInt(hex, 16));
+
+        // Check if we have at least 4 parts to accommodate the third data
+        if (parts.length >= 3) {
+            // Modify the first byte to ignore the first digit
+            
+            parts[0] = parts[0] & 0x0F;
+            // Use big-endian order for the distance (first two bytes)
+            let distanceBytes = [parts[0], parts[1]]; 
+            distancia = bytesToIntBigEndian(distanceBytes);
+
+            parts[2] = parts[2] & 0x0F;
+
+          // Extract the confidence (third byte in pay_hex)
+          let confianzaBytes = [parts[2], parts[3]]; // Keep order as '80 64'
+          confianza = bytesToIntBigEndian(confianzaBytes);
+
+        
+        }
+
+        // Convert distance to meters if needed
+        distancia = distancia;
+
+
+    return { 
+        distancia: distancia, // Solo se convierte si tercerByte es 01
+        confianza: confianza,
+        //pay_hex: pay_hex
+    }
+}
+```
+
+<br>
 
 ### Battery check 485-LB
 http://wiki.dragino.com/xwiki/bin/view/Main/How%20to%20calculate%20the%20battery%20life%20of%20Dragino%20sensors%3F/
