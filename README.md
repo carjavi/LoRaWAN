@@ -10,7 +10,7 @@
 
 <br>
 
-# The Things Stack Cloud
+# The Things Stack Cloud (Chile setting)
 https://www.thethingsindustries.com/
 
 1. Get a Unique gateway ID ```Gateway EUI```
@@ -20,15 +20,18 @@ https://www.thethingsindustries.com/
 5. Get the Network name / Network ID
 6. Get the server address ```xxxxxxxxx.nam1.cloud.thethings.industries```
 7. Add a gateway in TTN V3 Server using the ```Gateway EUI``` / Gateway server address must match the gateway configuration (la dirección del gateway debe ser igual tanto en el server TTN como el mismo gateway. esta dirección involcra el cluster)
-8. Choose frecuency plan ```AU_915_928_FSB_2```
+8. Choose frecuency plan ```Australia 915-928 MHz,FSB 2 (used by TTN)```
 9. After creating the gateway, you can see the gateway info
 
 
 ## Setting TTN server
 https://xxxxxxxxxx.nam1.cloud.thethings.industries/console/
 
+## Screenshot
 
-
+<p align="center"><img src="./img/cluster.jpg" width="500"   alt=" " /></p>
+<p align="center"><img src="./img/gateway-address.png" width="500"   alt=" " /></p>
+<p align="center"><img src="./img/frecuency-plan.png" width="500"   alt=" " /></p>
 
 <br>
 
@@ -39,7 +42,7 @@ info: http://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20All%20Ga
 
 ## Typical Network Setup
 ```Wifi AP:```<br>
-name: dragino-27cbec
+name: dragino-27cbec <br>
 password: dragino+dragino
 
 ```Browser IP``` <br> 
@@ -55,7 +58,7 @@ Contraseña: dragino
 IP: 172.31.255.253 <br>
 Netmask: 255.255.255.252
 
-```Browser IP``` 
+```Browser IP``` <br>
 172.31.255.254:8000
 
 ```Router Access```<br>
@@ -64,7 +67,7 @@ Contraseña: dragino
 
 info: http://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20All%20Gateway%20models/DLOS8N/#H11.3IconfiguredDLOS8NforWiFiaccessandlostitsIP.Whattodonow3F
 
-## DLOS8N Setting (Chile)
+## DLOS8N Setting 
 frecuencia: 915/920/923/ EC25-aux
 
 ## Access the Internet as a WiFi Client
@@ -93,7 +96,7 @@ Frecuency Sub Band: 2:AU915,FSB2 (916.8-918.2)
 
 ```path: LoRaWan/LoRaWAN-Semtech UDP/LoRaWAN Configuration/Primary LoRaWAN Server``` <br>
 Service Provider: Custom / Private LoRaWAN <br>
-Server Address: xxxxxxxxx.nam1.cloud.thethings.industries <br>
+Server Address: xxxxxxxxx.nam1.cloud.thethings.industries (este dato se obtiene después de crear el server en el TTN)<br>
 Uplink : 1700 <br>
 Downlink: 1700
 
