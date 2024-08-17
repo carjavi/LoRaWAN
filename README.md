@@ -727,5 +727,4 @@ carjavi@hotmail.com <br>
 </p>
 
 
-# LoRaWAN
-LoRaWAN setting/ end point
+
