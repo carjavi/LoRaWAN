@@ -176,6 +176,8 @@ Software ```DRAGINO-RS485-Config V1.3```<br>
 
 <p align="center"><img src="./img/software.png" width="800"   alt=" " /></p>
 
+> :memo: **Note:** El Software ```DRAGINO-RS485-Config V1.3``` se desconecta despues de algunos segundos de inactividad. hay que conectar de nuevo para poder acceder a la configuración del 485-LB
+
 
 ### AT command summary (para la configuración interna del 485LB)
 | Name      | Purpose                                         |
@@ -213,6 +215,12 @@ Software ```DRAGINO-RS485-Config V1.3```<br>
 * AT+(comando)?  => pregunta por el estatus del comando o ayuda del comando
 * AT+(comando)=? => Pregunta por el valor que tiene asignado el comando
 * By default, the AT+5VT=0
+
+> :warning: **Warning:**
+> * 485_LB/LS no admite el comando AT+SEND 
+> * ejemplo: AT+SEND=2:48656C6C6F //Este comando envía el mensaje "Hello" en formato hexadecimal (48656C6C6F) al puerto 2
+> * ejemplo: AT+SEND=12:hello world // Send text data along with the application port
+> 
   
 <br>
 
@@ -420,7 +428,7 @@ AT+GETSENSORVALUE=1  // leo la data y la sube al server
 
 <br>
 
-## Componer la carga útil PAYLOAD
+## PAYLOAD 
 cuando se manda a leer los sensores cada AT+COMMANDx and AT+DATACUTx saca la data de cada sensor y aqui veremos como empaquetar la data de cada sensor
 
 ### Envia todos los datas recibidas en un solo formato al server
@@ -498,29 +506,35 @@ mas info: https://www.modbustools.com/modbus.html
 <br>
 
 # Dragino 485-LB read arduino UART MODBUS RTU
+
+Conection: <br>
+485LB - Arduino Nano <br>
+Tx   --> Rx<br>
+Rx  --> Tx<br>
++5V   --> +5V<br>
+GNG  --> GND<br>
+
+> :bulb: **Tip:**  
+> * Se puede programar el arduino sin deconectarlo del 485LB-Node. Se puede Conectar el 485LB-Node al computador por UART y usar comandos AT para ver el PAYLOAD sin necesidad de mandar los datos al server LoRaWAN.
+> * También es posible subir datos al server LoRaWAN simplemente pulsaldo el Push Button por menos de 3s 
+
+
 code arduino:
 ``` c++
+
 /*
   * Arduino Modbus RS485/UART slave for Dragino RS485-BL
   * Created by Carlos Briceño (2024) 
   * https://github.com/smarmengol/Modbus-Master-Slave-for-Arduino
  */
 
-// Uncomment these lines to use Software Serial for RS-485 communication (oooooooooooooooojjjjoooooooooooo)    <---------------------------
-//#define SWSERIAL_RX 6  //Digital pin used for software serial rx
-//#define SWSERIAL_TX 7  //Digital pin used for software serial tx
-
 #define SLAVE_ID 0x01  //Modbus slave address 8bit
-uint16_t modbus_array[] = {0,0,0,0,0,0}; //Initialization for Modbus Holding registers:  2 registros en 0 cada uno.
-#define RS485_DERE 4  //Digital pin connected to DE & RE pin of RS-485 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+uint16_t modbus_array[] = {0,0,0,0}; //Initialization for Modbus Holding registers
 
 //Many thanks to smarmengol: https://github.com/smarmengol/Modbus-Master-Slave-for-Arduino
-#include "src/Modbus-Master-Slave-for-Arduino-master/ModbusRtu.h"
-
-
+#include "src/Modbus-Master-Slave-for-Arduino-master/ModbusRtu.h" // En la misma raiz del codigo arduino
 
 const uint16_t int_min_value = -32768;  //signed 16 bit integer ranges from -32768 to 32767
-
 
 #ifdef SWSERIAL_RX
 #include <SoftwareSerial.h>
@@ -529,8 +543,7 @@ SoftwareSerial myserial(SWSERIAL_RX, SWSERIAL_TX);
 Modbus slave(SLAVE_ID,myserial,RS485_DERE);
 #else
 //Modbus slave ID, RS-485 module comunication on Hardware Serial, and Arduino digital pin connected to both DE & RE pins of RS-485
-// OJOOOOO RS485_DERE podria ser 0 probar
-Modbus slave(SLAVE_ID,Serial,RS485_DERE);
+Modbus slave(SLAVE_ID,Serial,0);
 #endif
 
 //slave This is the name of the object being created from the Modbus class you can use it to manage communication with the Modbus master, including responding to read/write requests.
@@ -543,13 +556,11 @@ void setup()
   Serial.begin(9600);
   Serial.println("Arduino Modbus Slave");
   delay(5000);
-
   
   Serial.begin(9600);  //Init serial at 9600 baud
   #ifdef SWSERIAL_RX
   myserial.begin(9600);
   #endif
-  uint16_t num5 = 4567;
   slave.start();
 }
 
@@ -564,40 +575,27 @@ void loop()
   //sizeof(modbus_array)/sizeof(modbus_array[0]) This expression calculates the number of elements in the modbus_array.
   //required by the poll method to know how many registers it can read from or write to.
 
-  int num1 = 187;
-  int num2 = 100;
-  int num3 = 49;
+  int num1 = 1024;
+  int num2 = 255;
+  int num3 = 25;
   int num4 = 8;
-  uint16_t num5 = 4567;
-  uint16_t num6 = 123;
-
-  uint16_t valor1 = num1-int_min_value; //Manually converting from int to uint. To get back the actual value you should just subtract 32768 (and divide by 100)
-  uint16_t valor2 = num2-int_min_value;
-  uint16_t valor3 = num3-int_min_value;
-  uint16_t valor4 = num4-int_min_value;
 
   //Grabamos data en los registros del array 
-  modbus_array[0] = valor1; // el array debe ser uint16_t y no un int o float. si valor tiene decimales se debe * 100 para quitar decimales y luego / 100 para mostrar el valor original
-  modbus_array[1] = valor2;
-  modbus_array[2] = valor3;
-  modbus_array[3] = valor4;
-  modbus_array[4] = num5;
-  modbus_array[5] = num6;
+  modbus_array[0] = num1; 
+  modbus_array[1] = num2;
+  modbus_array[2] = num3;
+  modbus_array[3] = num4;
 
-  // solo para DEBUG, no puede enviar texto al terminal serial porque modifica el payload
-  //muestra el valor del registro 1 en uint
-  //Serial.print("Register 1 (uint): "); 
-  //Serial.println(modbus_array[0]); //
 
-  // muestra el registro1 como entero
-  //int num = (modbus_array[0]+int_min_value); //Convert from uint to int
-  //Serial.print("Register 1 (int): ");
-  //Serial.println(num);  // deberia mostrar 123
-
-  delay(200);
+  delay(100);
 
 }
 ```
+> :warning: **Warning:**
+> * El comando ```Serial.print``` o ```Serial.printl``` dentro del ```Loop``` arduino altera la lectura de los registros Modbus. Solo se podria usar para depurar el codigo arduino pero no para la lectura de datos.
+> * El comando ```Serial.print``` o ```Serial.printl``` solo se podria usar el ```Setup``` dentro del codigo arduino.
+
+<br>
 
 ## 485-LB configuration commands:
 ```
@@ -615,31 +613,73 @@ AT+DATAUP=0 // configura para enviar la data en un solo payload al server
 AT+PAYVER=1 // etiqueta para identificar que es el payload 1
 
 ```
+Datos a leer en el arduino por MODBUS:
+```
+registro[1] = 1024
+registro[2] = 255
+registro[3] = 25
+registro[4] = 8
+```
+
 Leer 1er registro del arduino
 ```
 AT+COMMAND1= 01 03 00 00 00 01,1  // con este comando solo lee el primer registro del array_bus
 AT+GETSENSORVALUE=0 // leo la data sin enviar al server
-RETURN1 = 01 03 XX 80 64 XX XX  
-PAYLOAD = XX XX XX 80 64   // así debería ser el payload
+Respuesta:
+CMD1     = 01 03 00 00 00 01 84 0a 
+RETURN1  = 01 03 02 04 00 ba 84 
+Payload  = 0d dce 01 04 00  
+Data:
+xx xx (hex) => battery voltage
+xx    (hex) => etiqueta del PAYVER=1 
+04 00 (hex) => 1024 (dec) // Data del 1er registro
 ```
 Leer 2do  registro del arduino
 ```
-AT+COMMAND1= 01 03 00 00 00 02,1 
+AT+COMMAND1= 01 03 00 00 00 02,1 // con este comando solo lee los 2 primeros registros del array_bus
 AT+GETSENSORVALUE=0 // leo la data sin enviar al server
-la lectura deberia ser:
-RETURN1= 01 03 04 80 64 80 64 f2 07 
-PAYLOAD = xx xx xx 80 64 80 64
-registro 1 = 100 Dec/(64 80)hex, registro 2 = 100 Dec/(64 80)hex
+Respuesta:
+CMD1     = 01 03 00 00 00 02 c4 0b 
+RETURN1  = 01 03 04 04 00 00 ff bb 43  
+Payload  = 0d dce 01 04 00 00 ff 
+Data:
+xx xx (hex) => battery voltage
+xx    (hex) => etiqueta del PAYVER=1 
+04 00 (hex) => 1024 (dec) // Data del 1er registro
+00 ff (hex) => 255 (dec)  // Data del 2do registro
 ```
 
 Leer 3er registro del arduino
 ```
-AT+COMMAND1= 01 03 00 00 00 03,1 
+AT+COMMAND1= 01 03 00 00 00 03,1 // con este comando solo lee los 3 primeros registros del array_bus
 AT+GETSENSORVALUE=0 // leo la data sin enviar al server
-la lectura deberia ser:
-RETURN1= 01 03 06 80 64 80 64 81 c8 46 a4
-PAYLOAD = 0d de6 01 80 64 80 64 81 c8 
-registro 1 = 100 Dec/(64 80)hex, registro 2 = 100 Dec/(64 80)hex, registro 3 = C8 81
+Respuesta:
+CMD1     = 01 03 00 00 00 03 05 cb 
+RETURN1  = 01 03 06 04 00 00 ff 00 19 d1 0b 
+Payload  = 0d dce 01 04 00 00 ff 00 19
+Data:
+xx xx (hex) => battery voltage
+xx    (hex) => etiqueta del PAYVER=1
+04 00 (hex) => 1024 (dec) // Data del 1er registro
+00 ff (hex) => 255 (dec)  // Data del 2do registro
+00 19 (hex) => 25 (dec)	  // Data del 3er registro
+```
+
+Leer 4to registro del arduino
+```
+AT+COMMAND1= 01 03 00 00 00 04,1  // con este comando los 4registros del array_bus
+AT+GETSENSORVALUE=0 // leo la data sin enviar al server
+Respuesta:
+CMD1     = 01 03 00 00 00 04 44 09
+RETURN1  = 01 03 08 04 00 00 ff 00 19 00 08 50 31
+Payload  = 0d dda 01 04 00 00 ff 00 19 00 08
+Data:
+xx xx (hex) => battery voltage
+xx    (hex) => etiqueta del PAYVER=1
+04 00 (hex) => 1024 (dec) // Data del 1er registro
+00 ff (hex) => 255 (dec)  // Data del 2do registro
+00 19 (hex) => 25 (dec)	  // Data del 3er registro
+00 08 (hex) =>  8 (dec)	  // Data del 4to registro
 ```
 
 ## Payload Decoder TTN 
