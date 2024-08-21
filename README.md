@@ -529,39 +529,20 @@ code arduino:
   * https://github.com/smarmengol/Modbus-Master-Slave-for-Arduino
  */
 
+
+// ModBUS setting
+#include <ModbusRtu.h>
 #define SLAVE_ID 0x01  //Modbus slave address 8bit
-uint16_t modbus_array[] = {0,0,0,0}; //Initialization for Modbus Holding registers
-
-//Many thanks to smarmengol: https://github.com/smarmengol/Modbus-Master-Slave-for-Arduino
-#include "src/Modbus-Master-Slave-for-Arduino-master/ModbusRtu.h" // En la misma raiz del codigo arduino
-
-const uint16_t int_min_value = -32768;  //signed 16 bit integer ranges from -32768 to 32767
-
-#ifdef SWSERIAL_RX
-#include <SoftwareSerial.h>
-SoftwareSerial myserial(SWSERIAL_RX, SWSERIAL_TX);
-//Modbus slave ID, RS-485 module comunication on Software Serial, and Arduino digital pin connected to both DE & RE pins of RS-485
-Modbus slave(SLAVE_ID,myserial,RS485_DERE);
-#else
-//Modbus slave ID, RS-485 module comunication on Hardware Serial, and Arduino digital pin connected to both DE & RE pins of RS-485
+uint16_t modbus_array[] = {0,0,0,0}; //Initialization for Modbus Holding registers 
 Modbus slave(SLAVE_ID,Serial,0);
-#endif
 
-//slave This is the name of the object being created from the Modbus class you can use it to manage communication with the Modbus master, including responding to read/write requests.
-//(SLAVE_ID, Serial, RS485_DERE):
-// The Serial object represents the default serial port on the Arduino, used for communication with the RS-485 transceiver.
-// the RS485_DERE This is the digital pin connected to both the DE (Driver Enable) and RE (Receiver Enable) pins of the RS-485 transceiver module.
 
 void setup()
 {
   Serial.begin(9600);
   Serial.println("Arduino Modbus Slave");
-  delay(5000);
+  delay(2000);
   
-  Serial.begin(9600);  //Init serial at 9600 baud
-  #ifdef SWSERIAL_RX
-  myserial.begin(9600);
-  #endif
   slave.start();
 }
 
@@ -589,6 +570,7 @@ void loop()
   delay(100);
 
 }
+
 ```
 > :warning: **Warning:**
 > * El comando ```Serial.print``` o ```Serial.printl``` dentro del ```Loop``` arduino altera la lectura de los registros Modbus. Solo se podria usar para depurar el codigo arduino pero no para la lectura de datos.
@@ -604,13 +586,12 @@ AT+PARITY=0
 AT+STOPBIT=1
 AT+DATABIT=8
 AT+CMDDL1=1000 // tiempo de espéra que va a esperar el RS485LB para recibir un dato
-AT+5VT=1000 // tiempo en que va a encender el arduino
+AT+5VT=2000 // tiempo en que va a encender el arduino 
 AT+MBFUN=1 // habilito lectura rapida de comandos MODBUS
 ATZ // reset
 AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
 AT+DATAUP=0 // configura para enviar la data en un solo payload al server
 AT+PAYVER=1 // etiqueta para identificar que es el payload 1
-
 ```
 Datos a leer en el arduino por MODBUS:
 ```
@@ -680,6 +661,8 @@ xx    (hex) => etiqueta del PAYVER=1
 00 19 (hex) => 25 (dec)	  // Data del 3er registro
 00 08 (hex) =>  8 (dec)	  // Data del 4to registro
 ```
+> :warning: **Warning:** si AT+5VT < 2000ms el RETURN es null. debe ser un poco mayor para poder leer los registros.
+
 <br>
 
 ## Payload Decoder TTN 
@@ -731,6 +714,69 @@ AT+TDC=60000 // 1 minutos
 AT+TDC=300000 // 5 minutos
 ```
 
+
+# Dragino 485-LB read Sonar Blue Robotic arduino UART MODBUS RTU
+
+## 485-LB setting commands:
+```
+AT+MOD=2 // TTL UART
+AT+BAUDR=9600 // setting UART
+AT+PARITY=0
+AT+STOPBIT=1
+AT+DATABIT=8
+AT+CMDDL1=1000 // tiempo de espéra que va a esperar el RS485LB para recibir un dato
+AT+5VT=20000 // tiempo en que va a encender el arduino 
+AT+MBFUN=1 // habilito lectura rapida de comandos MODBUS
+ATZ // reset
+AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
+AT+DATAUP=0 // configura para enviar la data en un solo payload al server
+AT+PAYVER=1 // etiqueta para identificar que es el payload 1
+
+AT+COMMAND1= 01 03 00 00 00 03,1 // leeremos 3 bytes (distancia/confianza/sensor-fuga-agua)
+//testing
+AT+GETSENSORVALUE=0 // local
+AT+GETSENSORVALUE=1 // subiendo al server LoRaWAN
+```
+
+Payload Decoder:
+```javascript
+function decodeUplink(input) {
+    // Crear un nuevo array de bytes que incluya todos los bytes originales
+    let extendedBytes = input.bytes.slice(); // Copia los bytes originales
+
+    return { 
+        data: Decode(input.fPort, extendedBytes, input.variables)
+    };   
+}
+
+function Decode(fPort, bytes, variables) {
+
+    // Convierte el payload en valores numéricos.
+    let BatV = ((bytes[0]<<8 | bytes[1])&0x7fff)/1000;
+    let Registro1 = ((bytes[3]<<8 | bytes[4])&0x7fff);
+    let Registro2 = ((bytes[5]<<8 | bytes[6])&0x7fff);
+    let Registro3 = ((bytes[7]<<8 | bytes[8])&0x7fff);
+    let Registro4 = ((bytes[9]<<8 | bytes[10])&0x7fff);
+
+    return { 
+        BatV: BatV,
+        Registro1: Registro1, // Solo se convierte si tercerByte es 01
+        Registro2: Registro2,
+        Registro3: Registro3,
+        Registro4: Registro4
+    }
+}
+```
+
+## Check 485-LB sampling time
+```
+AT+TDC=?       // el valor es en ms
+recv: 1200000 // default es 20 minutos
+
+//testing
+AT+TDC=60000 // 1 minutos
+AT+TDC=300000 // 5 minutos
+```
 
 <br>
 
