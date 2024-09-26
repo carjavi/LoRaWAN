@@ -922,6 +922,171 @@ AT+TDC=300000 // 5 minutos
 
 <br>
 
+# Debugging RPi & 485LB Modbus 8 register
+
+Codigo para probar como un nodo 485LB puede leer 8 registros en una raspberry  desde el puerto ttyS0 corriendo en un loop infinito en python.
+
+## 485-LB setting commands:
+```
+AT+MOD=2 // TTL UART
+AT+BAUDR=9600 // setting UART
+AT+PARITY=0
+AT+STOPBIT=1
+AT+DATABIT=8
+AT+CMDDL1=1000 // tiempo de espéra que va a esperar el RS485LB para recibir un dato
+AT+5VT=20000 // tiempo en que va a encender el arduino 
+AT+MBFUN=1 // habilito lectura rapida de comandos MODBUS
+ATZ // reset
+AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
+AT+DATAUP=0 // configura para enviar la data en un solo payload al server
+AT+PAYVER=1 // etiqueta para identificar que es el payload 1
+
+AT+COMMAND1= 01 03 00 00 00 08,1 // leeremos 3 bytes (distancia/confianza/sensor-fuga-agua)
+//testing
+//testing
+AT+GETSENSORVALUE=0 // local
+AT+GETSENSORVALUE=1 // subiendo al server LoRaWAN
+```
+
+<br>
+
+modbus_debug.py
+```python
+"""
+Modbus: Slave Modbus RTU in Python
+
+(C)2024 - Carlos Briceño - carjavi@hotmail.com
+
+Para Usarse con DRAGINO 485-LB nodo LoRaWAN
+
+Nota: Puerto UART para el 485LB = ttyS0
+
+"""
+import sys
+import time
+import threading
+import logging
+import modbus_tk
+import modbus_tk.defines as cst
+import modbus_tk.modbus as modbus
+import modbus_tk.modbus_rtu as modbus_rtu
+import serial
+
+
+# Configuración inicial de los registros de holding
+holding_register_values = [0, 0, 0, 0, 0, 0, 0, 0]  
+
+def close_serial_port(serial_port):
+    """Cierra el puerto serial si está abierto"""
+    if serial_port.is_open:
+        serial_port.close()
+        print(f"Puerto serial {serial_port.port} estaba abieto, se cerro para continuar.")
+
+def initialize_sensor():
+    sensor_port = serial.Serial("/dev/ttyUSB0", 115200)
+    return sensor_port
+
+
+def update_registers_loop(slave, sensor_port):
+    """Bucle infinito para actualizar los valores de los registros holding con los datos del sensor"""
+    global holding_register_values
+    while True:
+        #distance, confidence = read_sensor(myPing)
+        holding_register_values[0] = 100 
+        holding_register_values[1] = 200
+        holding_register_values[2] = 300
+        holding_register_values[3] = 400 
+        holding_register_values[4] = 500 
+        holding_register_values[5] = 600 
+        holding_register_values[6] = 700 
+        holding_register_values[7] = 800 
+        slave.set_values('0', 0, holding_register_values)  # Guardar valores en los registros 
+        #print("ready...")
+        time.sleep(1)  # Intervalo de actualización (1 segundo)
+
+if __name__ == "__main__":
+    # Configuración del puerto serial para el servidor Modbus RTU
+    modbus_port = serial.Serial('/dev/ttyS0', 9600)
+    close_serial_port(modbus_port)  # Cierra el puerto si está abierto antes de iniciar el servidor
+
+    # Crear el servidor Modbus RTU
+    server = modbus_rtu.RtuServer(modbus_port)
+
+    sensor_port = initialize_sensor()
+
+    try:
+        print("running... enter 'quit' for closing the server")
+        
+        server.start()
+        
+        # esclavo dirección 0x01
+        slave_1 = server.add_slave(1)
+        # Añadir un bloque de registros holding 
+        slave_1.add_block('0', cst.HOLDING_REGISTERS, 0, 8)  
+
+        # Iniciar el Demonio para la actualización de los registros
+        sensor_thread = threading.Thread(target=update_registers_loop, args=(slave_1, sensor_port))
+        sensor_thread.daemon = True  # El demonio se cerrará cuando el programa principal termine
+        sensor_thread.start()
+
+        while True:
+            
+            # Comando de consola para manejo del servidor
+            cmd = sys.stdin.readline()
+            args = cmd.split(' ')
+            if cmd.find('quit') == 0:
+                sys.stdout.write('bye-bye\r\n')
+                break
+    finally:
+        server.stop()
+        #close_serial_port(modbus_port)  # Cerrar el puerto ttyS0 al finalizar el servidor
+
+```
+
+<br>
+
+Payload Decoder:
+```javascript
+function decodeUplink(input) {
+    // Crear un nuevo array de bytes que incluya todos los bytes originales
+    let extendedBytes = input.bytes.slice(); // Copia los bytes originales
+
+    return { 
+        data: Decode(input.fPort, extendedBytes, input.variables)
+    };   
+}
+
+function Decode(fPort, bytes, variables) {
+
+    // Convierte el payload en valores numéricos.
+    let BatV = ((bytes[0]<<8 | bytes[1])&0x7fff)/1000;
+    let Registro1 = ((bytes[3]<<8 | bytes[4])&0x7fff);
+    let Registro2 = ((bytes[5]<<8 | bytes[6])&0x7fff);
+    let Registro3 = ((bytes[7]<<8 | bytes[8])&0x7fff);
+    let Registro4 = ((bytes[9]<<8 | bytes[10])&0x7fff);
+    let Registro5 = ((bytes[11]<<8 | bytes[12])&0x7fff);
+    let Registro6 = ((bytes[13]<<8 | bytes[14])&0x7fff);
+    let Registro7 = ((bytes[15]<<8 | bytes[16])&0x7fff);
+    let Registro8 = ((bytes[17]<<8 | bytes[18])&0x7fff);
+
+    return { 
+        BatV: BatV,
+        Registro1: Registro1, // Solo se convierte si tercerByte es 01
+        Registro2: Registro2,
+        Registro3: Registro3,
+        Registro4: Registro4,
+        Registro5: Registro5,
+        Registro6: Registro6,
+        Registro7: Registro7,
+        Registro8: Registro8
+    }
+}
+```
+
+
+<br>
+
+----
 
 ### Battery check 485-LB
 http://wiki.dragino.com/xwiki/bin/view/Main/How%20to%20calculate%20the%20battery%20life%20of%20Dragino%20sensors%3F/
