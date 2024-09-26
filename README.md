@@ -89,7 +89,25 @@ Usar (Passphrase) para colocar password red
 <br>
 
 ## 4G setting
-????????????????????????????
+```path: Network/Celular``` <br>
+Test SIM card Movistar: <br>
+APN: wap.tmovil.cl  <br>
+usuario: wap <br>
+contraseña: wap <br>
+Pin:1234 default <br>
+
+> :bulb: **Tip:** Marca *303# en tu celular Movistar Prepago o con Plan Controlado y accede a múltiples opciones
+
+<p align="center"><img src="./img/gateway_4g.png" width="700"   alt=" " /></p>
+
+
+<br>
+
+<p align="center"><img src="./img/gateway_4g1.png" width="700"   alt=" " /></p>
+
+> :warning: **Warning:**  al PARECER, cuando estamos conectados al wifi del dragino desde el computador, no obtenemos internet desde el 4G
+
+<br>
 
 ## Frequency LoRa Chile
 
