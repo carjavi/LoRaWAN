@@ -817,42 +817,8 @@ if __name__ == "__main__":
             if cmd.find('quit') == 0:
                 sys.stdout.write('bye-bye\r\n')
                 break
-            elif args[0] == 'add_slave':
-                slave_id = int(args[1])
-                server.add_slave(slave_id)
-                sys.stdout.write('done: slave %d added\r\n' % (slave_id))
-            elif args[0] == 'add_block':
-                slave_id = int(args[1])
-                name = args[2]
-                block_type = int(args[3])
-                starting_address = int(args[4])
-                length = int(args[5])
-                slave = server.get_slave(slave_id)
-                slave.add_block(name, block_type, starting_address, length)
-                sys.stdout.write('done: block %s added\r\n' % (name))
-            elif args[0] == 'set_values':
-                slave_id = int(args[1])
-                name = args[2]
-                address = int(args[3])
-                values = [int(v) for v in args[4:]]
-                slave = server.get_slave(slave_id)
-                slave.set_values(name, address, values)
-                values = slave.get_values(name, address, len(values))
-                sys.stdout.write('done: values written: %s\r\n' % (str(values)))
-            elif args[0] == 'get_values':
-                slave_id = int(args[1])
-                name = args[2]
-                address = int(args[3])
-                length = int(args[4])
-                slave = server.get_slave(slave_id)
-                values = slave.get_values(name, address, length)
-                sys.stdout.write('done: values read: %s\r\n' % (str(values)))
-            else:
-                sys.stdout.write("unknown command %s\r\n" % (args[0]))
     finally:
         server.stop()
-
-
 ```
 
 <br>
@@ -941,7 +907,7 @@ AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
 AT+DATAUP=0 // configura para enviar la data en un solo payload al server
 AT+PAYVER=1 // etiqueta para identificar que es el payload 1
 
-AT+COMMAND1= 01 03 00 00 00 08,1 // leeremos 3 bytes (distancia/confianza/sensor-fuga-agua)
+AT+COMMAND1= 01 03 00 00 00 08,1  
 //testing
 //testing
 AT+GETSENSORVALUE=0 // local
@@ -991,7 +957,6 @@ def update_registers_loop(slave, sensor_port):
     """Bucle infinito para actualizar los valores de los registros holding con los datos del sensor"""
     global holding_register_values
     while True:
-        #distance, confidence = read_sensor(myPing)
         holding_register_values[0] = 100 
         holding_register_values[1] = 200
         holding_register_values[2] = 300
@@ -1038,8 +1003,7 @@ if __name__ == "__main__":
                 sys.stdout.write('bye-bye\r\n')
                 break
     finally:
-        server.stop()
-        #close_serial_port(modbus_port)  # Cerrar el puerto ttyS0 al finalizar el servidor
+        print("debugging...")
 
 ```
 
