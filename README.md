@@ -619,6 +619,7 @@ ATZ // reset
 AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
 AT+DATAUP=0 // configura para enviar la data en un solo payload al server
 AT+PAYVER=1 // etiqueta para identificar que es el payload 1
+AT+TDC = 300000 // lectura cada 300000s = 5min / 1200000s = 20min
 ```
 Datos a leer en el arduino por MODBUS:
 ```
@@ -751,8 +752,6 @@ AT+TDC=300000 // 5 minutos
 Al leer el Slave-Modbus en la dirección 0x01 comandado en la dirección 0x00 se podra leer los siguientes registro: 123, 456, 789.
 
 ```python
-#!/usr/bin/env python
-# -*- coding: utf_8 -*-
 """
 Modbus: Slave Modbus RTU in Python
 
@@ -839,6 +838,7 @@ ATZ // reset
 AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
 AT+DATAUP=0 // configura para enviar la data en un solo payload al server
 AT+PAYVER=1 // etiqueta para identificar que es el payload 1
+AT+TDC = 300000 // lectura cada 300000s = 5min / 1200000s = 20min
 
 AT+COMMAND1= 01 03 00 00 00 03,1 // leeremos 3 bytes (distancia/confianza/sensor-fuga-agua)
 //testing
@@ -906,6 +906,7 @@ ATZ // reset
 AT+DATACUT1=0,0,0  // para ver la respuesta, sino el payload no es correcto
 AT+DATAUP=0 // configura para enviar la data en un solo payload al server
 AT+PAYVER=1 // etiqueta para identificar que es el payload 1
+AT+TDC = 300000 // lectura cada 300000s = 5min / 1200000s = 20min
 
 AT+COMMAND1= 01 03 00 00 00 08,1  
 //testing
@@ -948,12 +949,7 @@ def close_serial_port(serial_port):
         serial_port.close()
         print(f"Puerto serial {serial_port.port} estaba abieto, se cerro para continuar.")
 
-def initialize_sensor():
-    sensor_port = serial.Serial("/dev/ttyUSB0", 115200)
-    return sensor_port
-
-
-def update_registers_loop(slave, sensor_port):
+def update_registers_loop(slave, modbus_port):
     """Bucle infinito para actualizar los valores de los registros holding con los datos del sensor"""
     global holding_register_values
     while True:
@@ -977,8 +973,6 @@ if __name__ == "__main__":
     # Crear el servidor Modbus RTU
     server = modbus_rtu.RtuServer(modbus_port)
 
-    sensor_port = initialize_sensor()
-
     try:
         print("running... enter 'quit' for closing the server")
         
@@ -990,7 +984,7 @@ if __name__ == "__main__":
         slave_1.add_block('0', cst.HOLDING_REGISTERS, 0, 8)  
 
         # Iniciar el Demonio para la actualización de los registros
-        sensor_thread = threading.Thread(target=update_registers_loop, args=(slave_1, sensor_port))
+        sensor_thread = threading.Thread(target=update_registers_loop, args=(slave_1, modbus_port))
         sensor_thread.daemon = True  # El demonio se cerrará cuando el programa principal termine
         sensor_thread.start()
 
@@ -1035,7 +1029,7 @@ function Decode(fPort, bytes, variables) {
 
     return { 
         BatV: BatV,
-        Registro1: Registro1, // Solo se convierte si tercerByte es 01
+        Registro1: Registro1, 
         Registro2: Registro2,
         Registro3: Registro3,
         Registro4: Registro4,
