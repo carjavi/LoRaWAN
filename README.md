@@ -147,6 +147,40 @@ In TTN v3 portal, we can also see the gateway is connected.
 
 <br>
 
+# Register the Gateway to  The Things Stack Cloud (TTN)
+
+
+<p align="center"><img src="./img/gateway_register.png" width="800"   alt=" " /></p>
+
+> [!CAUTION]
+> En la caja del equipo se encuentra el EUI necesario para registrar el gateway. En el caso del Gateway dragino el GWID = EUI, son 16 caracteres alfanuméricos. 
+
+sample: <br>
+```Gateway EUI = GWID: A8 40 41 FF FF 29 94 C5```
+
+> [!TIP]
+> En caso de no tener la caja, en la pagina de configuración del Gateway en ```LoRaWan --Semtech UDP/General Settings``` podremos ver el Gateway EUI
+
+> [!CAUTION]
+>El Gateway ID must contain only lowercase letters, numbers and dashes (-)
+
+<p align="center"><img src="./img/gateway_register2.png" width="800"   alt=" " /></p>
+
+
+La frecuency plan: Australia 915-928MHz
+
+<p align="center"><img src="./img/gateway_register3.png" width="300"   alt=" " /></p>
+En General Settings debemos verificar la dirección la dirección del server
+
+<br>
+
+<p align="center"><img src="./img/gateway_register4.png" width="800"   alt=" " /></p>
+
+> > [!NOTE]
+>Después de configurar el gateway debemos verificar que el ```Gateway Server Address``` coincida con el ```Server Address``` ubicado en Gateway (LoraWan -- Semtech UDP/Primary LoRaWan Server/Server Address)
+
+<br>
+
 # Add a LoRaWAN End Device to The Things Stack Cloud (TTN)
 define the device in TTN v3:
 DEV EUI - Unique ID code for a particular device. <br>
@@ -160,7 +194,7 @@ APP Key - Unique key to secure communications with a particular device.<br>
 
 info: http://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20All%20Gateway%20models/DLOS8N/
 
-
+<br>
 
 # DRAGINO RS485-LB/LS
 Waterproof RS485/UART to LoRaWAN Converter
