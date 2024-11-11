@@ -170,6 +170,7 @@ sample: <br>
 La frecuency plan: Australia 915-928MHz
 
 <p align="center"><img src="./img/gateway_register3.png" width="300"   alt=" " /></p>
+
 En General Settings debemos verificar la dirección la dirección del server
 
 <br>
