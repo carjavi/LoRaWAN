@@ -44,109 +44,6 @@ https://xxxxxxxxxx.nam1.cloud.thethings.industries/console/
 
 <br>
 
-# DRAGINO DLOS8N Outdoor LoRaWAN Gateway Setting
-<p align="center"><img src="./img/gateway-DLOS8N.png" width="500"   alt=" " /></p>
-
-info: http://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20All%20Gateway%20models/DLOS8N/
-
-## Typical Network Setup
-```Wifi AP:```<br>
-name: dragino-27cbec <br>
-password: dragino+dragino
-
-```Browser IP``` <br> 
-10.130.1.1
-
-```Router Access```<br>
-Nombre de usuario: root <br>
-Contraseña: dragino
-
-## Ethernet conection
-
-```Eth0 PC setting``` <br>
-IP: 172.31.255.253 <br>
-Netmask: 255.255.255.252
-
-```Browser IP``` <br>
-172.31.255.254:8000
-
-```Router Access```<br>
-Nombre de usuario: root <br>
-Contraseña: dragino
-
-info: http://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20All%20Gateway%20models/DLOS8N/#H11.3IconfiguredDLOS8NforWiFiaccessandlostitsIP.Whattodonow3F
-
-## DLOS8N Setting 
-frecuencia: 915/920/923/ EC25-aux
-
-## Access the Internet as a WiFi Client
-```path: Network/Wifi/WiFi WAN Client Settings``` <br>
-Habilitar (Enable WiFi WAN Client) <br>
-Usar (WiFi Survey) para elegir Red WiFi <br>
-Usar (Passphrase) para colocar password red
-
-<p align="center"><img src="./img/wifi.jpg" width="700"   alt=" " /></p>
-<br>
-
-## 4G setting
-```path: Network/Celular``` <br>
-Test SIM card Movistar: <br>
-APN: wap.tmovil.cl  <br>
-usuario: wap <br>
-contraseña: wap <br>
-Pin:1234 default <br>
-
-> :bulb: **Tip:** Marca *303# en tu celular Movistar Prepago o con Plan Controlado y accede a múltiples opciones
-
-<p align="center"><img src="./img/gateway_4g.png" width="700"   alt=" " /></p>
-
-
-<br>
-
-<p align="center"><img src="./img/gateway_4g1.png" width="700"   alt=" " /></p>
-
-> :warning: **Warning:**  al PARECER, cuando estamos conectados al wifi del dragino desde el computador, no obtenemos internet desde el 4G
-
-<br>
-
-## Frequency LoRa Chile
-
-```path: LoRa/Radio Settings``` <br>
-keep Alive Period (sec): 120 <br>
-Frequency Plan: AU915 Australia 915Mhz (915-928) <br>
-Frecuency Sub Band: 2:AU915,FSB2 (916.8-918.2)
-
-<p align="center"><img src="./img/radio.jpg" width="700"   alt=" " /></p>
-<br>
-
-## Configure DLOS8N to connect to TTN v3
-
-```path: LoRaWan/LoRaWAN-Semtech UDP/LoRaWAN Configuration/Primary LoRaWAN Server``` <br>
-Service Provider: Custom / Private LoRaWAN <br>
-Server Address: xxxxxxxxx.nam1.cloud.thethings.industries (este dato se obtiene después de crear el server en el TTN)<br>
-Uplink : 1700 <br>
-Downlink: 1700
-
-<p align="center"><img src="./img/lorawan-setting.jpg" width="700"   alt=" " /></p>
-<br>
-
-Note: The server address must match the Gateway server address you choose in TTN V3.
-
-## if all is ok!
-
-<p align="center"><img src="./img/lorawan-ok.jpg" width="700"   alt=" " /></p>
-
-In TTN v3 portal, we can also see the gateway is connected.
-
-## LED Indicators
-* SOLID GREEN: DLOS8N is alive with LoRaWAN server connection.
-
-* BLINKING GREEN:Device has internet connection but no LoRaWAN Connection  or Device is in booting stage, in this stage, it will BLINKING GREEN for several seconds and then RED and YELLOW will blink together.
-
-* SOLID RED: Device doesn't have Internet connection.
-
-<br>
-
 # Register the Gateway to  The Things Stack Cloud (TTN)
 
 
@@ -167,7 +64,7 @@ sample: <br>
 <p align="center"><img src="./img/gateway_register2.png" width="800"   alt=" " /></p>
 
 
-La frecuency plan: Australia 915-928MHz
+La frecuency plan: ```Australia 915-928MHz FSB 2```
 
 <p align="center"><img src="./img/gateway_register3.png" width="300"   alt=" " /></p>
 
@@ -179,6 +76,8 @@ En General Settings debemos verificar la dirección la dirección del server
 
 > > [!NOTE]
 >Después de configurar el gateway debemos verificar que el ```Gateway Server Address``` coincida con el ```Server Address``` ubicado en Gateway (LoraWan -- Semtech UDP/Primary LoRaWan Server/Server Address)
+
+<br>
 
 <br>
 
@@ -194,6 +93,8 @@ APP Key - Unique key to secure communications with a particular device.<br>
 4. Secondly, choose the corresponding frequency and LoRaWAN ```AU_915_928_FSB_2```
 
 info: http://wiki.dragino.com/xwiki/bin/view/Main/User%20Manual%20for%20All%20Gateway%20models/DLOS8N/
+
+<br>
 
 <br>
 
